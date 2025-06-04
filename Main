@@ -79,15 +79,16 @@ class RNGGame:
             "Masterful": {"min": 851, "max": 875, "color": "#e04040", "weight": 2},
             "Arcane": {"min": 876, "max": 900, "color": "#FF0000", "weight": 1.5},  # Bright Red
             # Epic and Legendary tiers (901-1000)
-            "Epic": {"min": 901, "max": 925, "color": "#AA00AA", "weight": 1},
-            "Runic": {"min": 926, "max": 950, "color": "#53e619", "weight": 0.8},
-            "Legendary": {"min": 951, "max": 975, "color": "#FFAA00", "weight": 0.6},
-            "Mythic": {"min": 976, "max": 985, "color": "#FF5555", "weight": 0.7},
+            "Epic": {"min": 901, "max": 915, "color": "#AA00AA", "weight": 1},
+            "Runic": {"min": 916, "max": 930, "color": "#53e619", "weight": 0.9},
+            "Legendary": {"min": 931, "max": 950, "color": "#FFAA00", "weight": 0.8},
+            "Angelic": {"min": 951, "max": 975, "color": "#ff5900", "weight": 0.7},
+            "Mythic": {"min": 976, "max": 985, "color": "#FF5555", "weight": 0.6},
             "Divine": {"min": 986, "max": 995, "color": "#FFFFFF", "weight": 0.5},
             "Ethereal": {"min": 996, "max": 999, "color": "#95e8dd", "weight": 0.4},
             "Celestial": {"min": 1000, "max": 1000, "color": "#00FFFF", "weight": 0.2},
             #Secret Tier (1001)
-            "ų̵̧̙̖̠̟͓̼̲̗̖͍̽̏͝n̶̹̯͙̺͍͊́̄̇̎̈́͋̈̈́͛k̴͈̦̽̀̚n̷̨̢͕̱̭̭̼̰̯̬̔̀̈̑͜ô̴͙͍̼̮̗͈͉̥̻̰̳̱̘̳͓w̸̛̠̟͓͙͍͙̤̝̑͌̒̾̇̉̾͐͝͠n̴̠̰͉̳͕̭̖͉̣̥̎̈́͒̅̽̄̿͐̓̐͜͜": {"min": 1001, "max": 1001, "color": "#ab0505", "weight": 0.01}
+            "ų̵̧̙̖̠̟͓̼̲̗̖͍̽̏͝n̶̹̯͙̺͍͊́̄̇̎̈́͋̈̈́͛k̴͈̦̽̀̚n̷̨̢͕̱̭̭̼̰̯̬̔̀̈̑͜ô̴͙͍̼̮̗͈͉̥̻̰̳̱̘̳͓w̸̛̠̟͓͙͍͙̤̝̑͌̒̾̇̉̾͐͝͠n̴̠̰͉̳͕̭̖͉̣̥̎̈́͒̅̽̄̿͐̓̐͜͜": {"min": 1001, "max": 1001, "color": "#ab0505", "weight": 0.1}
         }
         return rarities
     def create_widgets(self):
@@ -413,10 +414,12 @@ class RNGGame:
         colors = []
         if roll >= 900:
             colors.append(self.rarities["Epic"]["color"])
-        if roll >= 925:
+        if roll >= 915:
             colors.append(self.rarities["Runic"]["color"])
-        if roll >= 950:
+        if roll >= 930:
             colors.append(self.rarities["Legendary"]["color"])
+        if roll >= 950:
+            colors.append(self.rarities["Angelic"]["color"])
         if roll >= 975:
             colors.append(self.rarities["Mythic"]["color"])
         if roll >= 985:
@@ -448,8 +451,10 @@ class RNGGame:
         elif roll >= 975:
             messagebox.showinfo("MYTHIC!", f"AMAZING! You rolled a MYTHIC {roll}!")
         elif roll >= 950:
+            messagebox.showinfo("ANGELIC!", f"TRANSCENDANT! You rolled an ANGELIC {roll}!")
+        elif roll >= 930:
             messagebox.showinfo("LEGENDARY!", f"SUPER! You rolled a LEGENDARY {roll}!")
-        elif roll >= 925:
+        elif roll >= 915:
             messagebox.showinfo("RUNIC!", f"GREAT! You rolled a RUNIC {roll}!")
         elif roll >= 900:
             messagebox.showinfo("EPIC!", f"NICE! You rolled an EPIC {roll}!")
