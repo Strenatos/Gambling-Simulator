@@ -1,0 +1,349 @@
+import tkinter as tk
+from tkinter import messagebox
+import random
+import time
+from collections import deque
+
+class SolsRNGGame:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Sols RNG 1000")
+        self.root.geometry("500x700")  # Increased height for new UI elements
+        
+        # Game variables
+        self.rolls = 0
+        self.rarest_roll = None
+        self.last_roll_time = 0
+        self.cooldown = 0  # seconds between rolls
+        self.history = deque(maxlen=50)  # Limited to 50 most recent rolls
+        
+        # Pity system variables
+        self.pity_counter = 0
+        self.failed_pity = 0
+        self.guaranteed_high = False
+        
+        # Rarity tiers with weighted probabilities
+        self.rarities = {
+            # Tier 1-10 (1-500) - Gray to Red gradient
+            "Basic": {"min": 1, "max": 50, "color": "#5A5A5A", "weight": 500},
+            "Common": {"min": 51, "max": 100, "color": "#7A5A5A", "weight": 350},
+            "Standard": {"min": 101, "max": 150, "color": "#9A5A5A", "weight": 250},
+            "Fair": {"min": 151, "max": 200, "color": "#BA5A5A", "weight": 150},
+            "Plain": {"min": 201, "max": 250, "color": "#DA5A5A", "weight": 100},
+            "Simple": {"min": 251, "max": 300, "color": "#FA5A5A", "weight": 75},
+            "Neat": {"min": 301, "max": 350, "color": "#FF6E6E", "weight": 50},
+            "Fine": {"min": 351, "max": 400, "color": "#FF8C8C", "weight": 30},
+            "Polished": {"min": 401, "max": 450, "color": "#FFAAAA", "weight": 20},
+            "Quality": {"min": 451, "max": 500, "color": "#FFC8C8", "weight": 10},
+            
+            # Tier 11-15 (501-750) - Greens
+            "Uncommon": {"min": 501, "max": 550, "color": "#55FF55", "weight": 8},
+            "Notable": {"min": 551, "max": 600, "color": "#4CAF50", "weight": 6},
+            "Refined": {"min": 601, "max": 650, "color": "#2E8B57", "weight": 5},
+            "Exceptional": {"min": 651, "max": 700, "color": "#00AA00", "weight": 4},
+            "Premium": {"min": 701, "max": 750, "color": "#008000", "weight": 3},
+            
+            # Tier 16-18 (751-900) - Blues
+            "Rare": {"min": 751, "max": 800, "color": "#5555FF", "weight": 2.5},
+            "Elite": {"min": 801, "max": 850, "color": "#4169E1", "weight": 2},
+            "Masterful": {"min": 851, "max": 900, "color": "#0000CD", "weight": 1.5},
+            
+            # Tier 19 (901-950) - Purples
+            "Epic": {"min": 901, "max": 915, "color": "#AA00AA", "weight": 1},
+            "Arcane": {"min": 916, "max": 930, "color": "#B700D3", "weight": 0.75},
+            "Mystical": {"min": 931, "max": 950, "color": "#9400D3", "weight": 0.5},
+            
+            # Tier 20 (951-1000) - Legendary colors
+            "Legendary": {"min": 951, "max": 975, "color": "#FFAA00", "weight": 0.3},
+            "Mythic": {"min": 976, "max": 990, "color": "#FF5555", "weight": 0.2},
+            "Divine": {"min": 991, "max": 999, "color": "#FFFFFF", "weight": 0.1},
+            "Celestial": {"min": 1000, "max": 1000, "color": "#00FFFF", "weight": 0.05}
+        }
+        
+        # Create GUI
+        self.create_widgets()
+        
+    def create_widgets(self):
+        # Title
+        tk.Label(self.root, text="SOLS RNG 1000", font=("Arial", 24, "bold")).pack(pady=10)
+        
+        # Pity system display
+        pity_frame = tk.Frame(self.root)
+        pity_frame.pack(pady=5)
+        
+        self.pity_label = tk.Label(
+            pity_frame, 
+            text=f"Pity: {self.pity_counter}/100", 
+            font=("Arial", 12)
+        )
+        self.pity_label.pack(side="left", padx=5)
+        
+        self.failed_pity_label = tk.Label(
+            pity_frame, 
+            text=f"Failed 50/50: {self.failed_pity}/3", 
+            font=("Arial", 12)
+        )
+        self.failed_pity_label.pack(side="left", padx=5)
+        
+        # Roll button
+        self.roll_button = tk.Button(
+            self.root, 
+            text="ROLL (1-1000)", 
+            font=("Arial", 18), 
+            command=self.roll,
+            bg="#4CAF50",
+            fg="white",
+            width=20
+        )
+        self.roll_button.pack(pady=15)
+        
+        # Stats frame
+        stats_frame = tk.Frame(self.root)
+        stats_frame.pack(pady=10)
+        
+        # Roll counter
+        self.roll_counter = tk.Label(
+            stats_frame, 
+            text=f"Rolls: {self.rolls}", 
+            font=("Arial", 12),
+            width=15
+        )
+        self.roll_counter.pack(side="left", padx=10)
+        
+        # Rarest roll display
+        self.rarest_label = tk.Label(
+            stats_frame, 
+            text="Rarest: None", 
+            font=("Arial", 12),
+            width=25
+        )
+        self.rarest_label.pack(side="left", padx=10)
+        
+        # Last roll display
+        self.last_roll_frame = tk.Frame(self.root, bd=2, relief="groove")
+        self.last_roll_frame.pack(pady=15, fill="x", padx=20)
+        
+        tk.Label(self.last_roll_frame, text="LAST ROLL", font=("Arial", 10)).pack()
+        
+        self.last_roll_value = tk.Label(
+            self.last_roll_frame, 
+            text="None", 
+            font=("Arial", 36, "bold")
+        )
+        self.last_roll_value.pack()
+        
+        self.last_roll_rarity = tk.Label(
+            self.last_roll_frame, 
+            text="", 
+            font=("Arial", 14)
+        )
+        self.last_roll_rarity.pack()
+        
+        # Exact tier and weight info
+        info_frame = tk.Frame(self.root)
+        info_frame.pack(pady=5)
+        
+        self.exact_tier_label = tk.Label(
+            info_frame,
+            text="",
+            font=("Arial", 10)
+        )
+        self.exact_tier_label.pack(side="left", padx=5)
+        
+        self.weight_label = tk.Label(
+            info_frame,
+            text="",
+            font=("Arial", 10)
+        )
+        self.weight_label.pack(side="left", padx=5)
+        
+        # History button
+        tk.Button(
+            self.root, 
+            text="View Roll History (Last 50)", 
+            command=self.show_history,
+            font=("Arial", 10)
+        ).pack(pady=10)
+        
+    def roll(self):
+        current_time = time.time()
+        if current_time - self.last_roll_time < self.cooldown:
+            remaining = self.cooldown - (current_time - self.last_roll_time)
+            messagebox.showwarning("Cooldown", f"Please wait {remaining:.1f} seconds before rolling again!")
+            return
+            
+        self.last_roll_time = current_time
+        self.rolls += 1
+        self.pity_counter += 1
+        
+        # Pity system logic
+        if self.pity_counter >= 100:
+            if self.guaranteed_high or random.random() < 0.5:  # 50% chance
+                roll = self.get_high_roll()
+                self.pity_counter = 0
+                self.failed_pity = 0
+                self.guaranteed_high = False
+            else:
+                roll = self.get_normal_roll()
+                self.failed_pity += 1
+                self.pity_counter = 0
+                if self.failed_pity >= 3:
+                    self.guaranteed_high = True
+                    self.failed_pity = 0
+        elif self.guaranteed_high:
+            roll = self.get_high_roll()
+            self.pity_counter = 0
+            self.guaranteed_high = False
+        else:
+            roll = self.get_normal_roll()
+        
+        # Update counters
+        self.roll_counter.config(text=f"Rolls: {self.rolls}")
+        self.pity_label.config(text=f"Pity: {self.pity_counter}/80")
+        self.failed_pity_label.config(text=f"Failed 50/50: {self.failed_pity}/3")
+        
+        # Determine rarity
+        rarity_name, color = self.get_rarity(roll)
+        exact_tier = self.get_exact_tier(roll)
+        weight = self.get_rarity_weight(rarity_name)
+        
+        # Update displays
+        self.last_roll_value.config(text=str(roll), fg=color)
+        self.last_roll_rarity.config(text=f"{rarity_name}", fg=color)
+        self.exact_tier_label.config(text=f"Tier: {exact_tier}", fg=color)
+        self.weight_label.config(text=f"1 in ~{int(1/weight)}", fg=color)
+        
+        # Update rarest roll
+        if self.rarest_roll is None or roll > self.rarest_roll[0]:
+            self.rarest_roll = (roll, rarity_name, color)
+            self.rarest_label.config(
+                text=f"Rarest: {roll} ({rarity_name})", 
+                fg=color
+            )
+        
+        # Add to history
+        self.history.append((roll, rarity_name, color, exact_tier))
+        
+        # Special effects for high rolls
+        if roll >= 950:
+            self.special_effect(roll)
+    
+    def get_normal_roll(self):
+        """Get a roll based on weighted probabilities"""
+        total_weight = sum(rarity["weight"] for rarity in self.rarities.values())
+        rand = random.uniform(0, total_weight)
+        current = 0
+        
+        for name, rarity in self.rarities.items():
+            if current + rarity["weight"] >= rand:
+                return random.randint(rarity["min"], rarity["max"])
+            current += rarity["weight"]
+        
+        return random.randint(1, 1000)  # Fallback
+    
+    def get_high_roll(self):
+        """Get a roll from Legendary+ tiers"""
+        high_rarities = {k:v for k,v in self.rarities.items() 
+                        if v["min"] >= 951 or k in ["Legendary", "Mythic", "Divine", "Celestial"]}
+        
+        total_weight = sum(rarity["weight"] for rarity in high_rarities.values())
+        rand = random.uniform(0, total_weight)
+        current = 0
+        
+        for name, rarity in high_rarities.items():
+            if current + rarity["weight"] >= rand:
+                return random.randint(rarity["min"], rarity["max"])
+            current += rarity["weight"]
+        
+        return random.randint(951, 1000)  # Fallback
+    
+    def get_rarity(self, roll):
+        for name, rarity in self.rarities.items():
+            if rarity["min"] <= roll <= rarity["max"]:
+                return name, rarity["color"]
+        return "Unknown", "#000000"
+    
+    def get_rarity_weight(self, rarity_name):
+        return self.rarities.get(rarity_name, {}).get("weight", 0)
+    
+    def get_exact_tier(self, roll):
+        """Returns the exact 50-point tier the roll belongs to"""
+        tier = (roll - 1) // 50 + 1
+        return f"Tier {tier}"
+    
+    def special_effect(self, roll):
+        colors = []
+        if roll >= 950:
+            colors.append("#FFAA00")  # Gold
+        if roll >= 976:
+            colors.append("#FF5555")   # Red
+        if roll >= 991:
+            colors.append("#FFFFFF")  # White
+        if roll == 1000:
+            colors.append("#00FFFF")  # Cyan
+        
+        original_bg = self.root.cget("bg")
+        
+        for color in colors:
+            self.root.configure(bg=color)
+            self.root.update()
+            time.sleep(0.15)
+        
+        self.root.configure(bg=original_bg)
+        
+        if roll == 1000:
+            messagebox.showinfo("CELESTIAL!", "UNBELIEVABLE! YOU ROLLED THE CELESTIAL 1000!")
+        elif roll >= 991:
+            messagebox.showinfo("DIVINE!", f"INCREDIBLE! You rolled a DIVINE {roll}!")
+        elif roll >= 976:
+            messagebox.showinfo("MYTHIC!", f"AMAZING! You rolled a MYTHIC {roll}!")
+        elif roll >= 950:
+            messagebox.showinfo("LEGENDARY!", f"GREAT! You rolled a LEGENDARY {roll}!")
+    
+    def show_history(self):
+        history_window = tk.Toplevel(self.root)
+        history_window.title("Roll History (Last 50)")
+        history_window.geometry("450x550")
+        
+        if not self.history:
+            tk.Label(history_window, text="No rolls yet!").pack()
+            return
+            
+        # Create a canvas with scrollbar
+        canvas = tk.Canvas(history_window)
+        scrollbar = tk.Scrollbar(history_window, orient="vertical", command=canvas.yview)
+        scrollable_frame = tk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(
+                scrollregion=canvas.bbox("all")
+            )
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # Header
+        header = tk.Frame(scrollable_frame)
+        header.pack(fill="x", pady=(0, 5))
+        tk.Label(header, text="Roll", width=6, font=("Arial", 10, "bold")).pack(side="left")
+        tk.Label(header, text="Rarity", width=20, font=("Arial", 10, "bold")).pack(side="left")
+        tk.Label(header, text="Tier", width=10, font=("Arial", 10, "bold")).pack(side="right")
+        
+        # Show history in reverse order (newest first)
+        for roll, rarity, color, exact_tier in reversed(self.history):
+            frame = tk.Frame(scrollable_frame, bd=1, relief="groove")
+            frame.pack(fill="x", padx=5, pady=1)
+            
+            tk.Label(frame, text=f"{roll:4}", fg=color, width=6, font=("Arial", 10, "bold")).pack(side="left")
+            tk.Label(frame, text=rarity, fg=color, width=20, anchor="w").pack(side="left")
+            tk.Label(frame, text=exact_tier, fg=color, width=10).pack(side="right")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    game = SolsRNGGame(root)
+    root.mainloop()
