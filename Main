@@ -248,7 +248,7 @@ class RNGGame:
         self.inventory_tree = ttk.Treeview(
             right_frame, 
             columns=("value"), 
-            height=30,
+            height=40,
             style="Treeview"
         )
         self.inventory_tree.heading("#0", text="Rarity")
@@ -379,7 +379,7 @@ class RNGGame:
                 return random.randint(rarity["min"], rarity["max"])
             current += rarity["weight"]
         
-        return random.randint(900, 1000)  # Fallback
+        return random.randint(900, 1001)  # Fallback
     
     def get_highest_roll(self):
         """Get a roll from 990+ tiers"""
@@ -394,7 +394,7 @@ class RNGGame:
                 return random.randint(rarity["min"], rarity["max"])
             current += rarity["weight"]
         
-        return random.randint(990, 1000)  # Fallback
+        return random.randint(990, 1001)  # Fallback
 
     def get_rarity(self, roll):
         for name, rarity in self.rarities.items():
