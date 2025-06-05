@@ -3,6 +3,7 @@ from tkinter import messagebox, ttk
 import random
 import time
 from collections import deque, defaultdict
+import uuid
 
 class RNGGame:
     def __init__(self, root):
@@ -27,6 +28,7 @@ class RNGGame:
         self.last_roll_time = 0
         self.cooldown = 0
         self.history = deque(maxlen=50)
+        self.is_flashing = False  # Flag to track flashing state
         
         # Pity system variables
         self.pity_counter = 0
@@ -40,44 +42,49 @@ class RNGGame:
         # Inventory system
         self.inventory = defaultdict(int)
         
+        # Track displayed notifications
+        self.shown_notifications = set()
+        
         # Create rarities with original names but smooth gradient
         self.rarities = self.create_rarities()
+        
+        # Calculate total weight for probability calculations
+        self.total_weight = sum(rarity["weight"] for rarity in self.rarities.values())
         
         # Create GUI
         self.create_widgets()
         
     def create_rarities(self):
-
         rarities = {
             # Basic tiers (0-500)
-            "Basic": {"min": 1, "max": 50, "color": "#CC9999", "weight": 500},  # Unsaturated red (20% saturation)
-            "Common": {"min": 51, "max": 100, "color": "#D1A17A", "weight": 350},  # Red to orange
-            "Standard": {"min": 101, "max": 150, "color": "#D6A95B", "weight": 250},  # Orange
-            "Fair": {"min": 151, "max": 200, "color": "#DBB13C", "weight": 150},  # Orange to yellow
-            "Plain": {"min": 201, "max": 250, "color": "#E0B91D", "weight": 100},  # Yellow
-            "Simple": {"min": 251, "max": 300, "color": "#C8C32A", "weight": 75},  # Yellow to green
-            "Neat": {"min": 301, "max": 350, "color": "#B0CC37", "weight": 50},  # Green
-            "Fine": {"min": 351, "max": 400, "color": "#98D644", "weight": 30},  # Green
-            "Polished": {"min": 401, "max": 450, "color": "#80E051", "weight": 20},  # Green to cyan
-            "Quality": {"min": 451, "max": 500, "color": "#68EA5E", "weight": 10},  # Cyan
+            "Basic": {"min": 1, "max": 50, "color": "#CC9999", "weight": 500},
+            "Common": {"min": 51, "max": 100, "color": "#D1A17A", "weight": 350},
+            "Standard": {"min": 101, "max": 150, "color": "#D6A95B", "weight": 250},
+            "Fair": {"min": 151, "max": 200, "color": "#DBB13C", "weight": 150},
+            "Plain": {"min": 201, "max": 250, "color": "#E0B91D", "weight": 100},
+            "Simple": {"min": 251, "max": 300, "color": "#C8C32A", "weight": 75},
+            "Neat": {"min": 301, "max": 350, "color": "#B0CC37", "weight": 50},
+            "Fine": {"min": 351, "max": 400, "color": "#98D644", "weight": 30},
+            "Polished": {"min": 401, "max": 450, "color": "#80E051", "weight": 20},
+            "Quality": {"min": 451, "max": 500, "color": "#68EA5E", "weight": 10},
             # Uncommon tiers (501-750)
-            "Uncommon": {"min": 501, "max": 525, "color": "#50E491", "weight": 9},  # Cyan
-            "Notable": {"min": 526, "max": 550, "color": "#38DDC4", "weight": 8},  # Cyan to blue
-            "Refined": {"min": 551, "max": 575, "color": "#20D6F7", "weight": 7},  # Blue
-            "Exceptional": {"min": 576, "max": 600, "color": "#2DBEF7", "weight": 6.5},  # Blue
-            "Premium": {"min": 601, "max": 625, "color": "#3AA6F7", "weight": 6},  # Blue to purple
+            "Uncommon": {"min": 501, "max": 525, "color": "#50E491", "weight": 9},
+            "Notable": {"min": 526, "max": 550, "color": "#38DDC4", "weight": 8},
+            "Refined": {"min": 551, "max": 575, "color": "#20D6F7", "weight": 7},
+            "Exceptional": {"min": 576, "max": 600, "color": "#2DBEF7", "weight": 6.5},
+            "Premium": {"min": 601, "max": 625, "color": "#3AA6F7", "weight": 6},
             "Rare": {"min": 626, "max": 650, "color": "#478EF7", "weight": 5.5},
             "Grand": {"min": 651, "max": 675, "color": "#4340e0", "weight": 5},
-            "Ridiculous": {"min": 676, "max": 700, "color": "#7540e0", "weight": 4.5}, 
+            "Ridiculous": {"min": 676, "max": 700, "color": "#7540e0", "weight": 4.5},
             "Distinguished": {"min": 701, "max": 725, "color": "#9340e0", "weight": 4},
-            "Heroic": {"min": 726, "max": 750, "color": "#b040e0", "weight": 3.5},   # Purple
+            "Heroic": {"min": 726, "max": 750, "color": "#b040e0", "weight": 3.5},
             # Rarer tiers (751-900)
             "Elite": {"min": 751, "max": 775, "color": "#db40e0", "weight": 3},
-            "Superior": {"min": 776, "max": 800, "color": "#E040B3", "weight": 2.7},  # Purple to red
+            "Superior": {"min": 776, "max": 800, "color": "#E040B3", "weight": 2.7},
             "Fabled": {"min": 801, "max": 825, "color": "#e04090", "weight": 2.5},
             "Exquisite": {"min": 826, "max": 850, "color": "#e0406d", "weight": 2.3},
             "Masterful": {"min": 851, "max": 875, "color": "#e04040", "weight": 2},
-            "Arcane": {"min": 876, "max": 900, "color": "#FF0000", "weight": 1.5},  # Bright Red
+            "Arcane": {"min": 876, "max": 900, "color": "#FF0000", "weight": 1.5},
             # Epic and Legendary tiers (901-1000)
             "Epic": {"min": 901, "max": 915, "color": "#AA00AA", "weight": 1},
             "Runic": {"min": 916, "max": 930, "color": "#53e619", "weight": 0.9},
@@ -87,10 +94,11 @@ class RNGGame:
             "Divine": {"min": 986, "max": 995, "color": "#FFFFFF", "weight": 0.5},
             "Ethereal": {"min": 996, "max": 999, "color": "#95e8dd", "weight": 0.4},
             "Celestial": {"min": 1000, "max": 1000, "color": "#00FFFF", "weight": 0.2},
-            #Secret Tier (1001)
-            "ų̵̧̙̖̠̟͓̼̲̗̖͍̽̏͝n̶̹̯͙̺͍͊́̄̇̎̈́͋̈̈́͛k̴͈̦̽̀̚n̷̨̢͕̱̭̭̼̰̯̬̔̀̈̑͜ô̴͙͍̼̮̗͈͉̥̻̰̳̱̘̳͓w̸̛̠̟͓͙͍͙̤̝̑͌̒̾̇̉̾͐͝͠n̴̠̰͉̳͕̭̖͉̣̥̎̈́͒̅̽̄̿͐̓̐͜͜": {"min": 1001, "max": 1001, "color": "#ab0505", "weight": 0.1}
+            # Secret Tier (1001)
+            "ų̵̧̙̖̠̟͓̼̲̗̖͍̽̏͝n̶̹̯͙̺͍͊́̄̇̎̈́͋̈̈́͛k̴͈̦̽̀̚n̷̨̢͕̱̭̭̼̰̯̬̔̀̈̑͜ô̴͙͍̼̮̗͈͉̥̻̰̳̱̘̳͓w̸̛̠̟͓͙͍͙̤̝̑͌̒̾̇̉̾͐͝͠n̴̠̰͉̳͕̭̖͉̣̥̎̈́͒̅̽̄̿͐̓̐͜͜": {"min": 1001, "max": 1001, "color": "#ab0505", "weight": 0.05}
         }
         return rarities
+    
     def create_widgets(self):
         # Configure root window
         self.root.configure(bg=self.bg_color)
@@ -225,7 +233,6 @@ class RNGGame:
         )
         self.exact_tier_label.pack(side="left", padx=5)
         
-        
         # History button
         tk.Button(
             left_frame, 
@@ -235,7 +242,18 @@ class RNGGame:
             bg=self.button_bg,
             fg=self.button_fg,
             activebackground="#555555" if self.dark_mode else "#45a049"
-        ).pack(pady=10)
+        ).pack(pady=5)
+        
+        # Dex button
+        tk.Button(
+            left_frame, 
+            text="View Dex", 
+            command=self.show_dex,
+            font=("Arial", 10),
+            bg=self.button_bg,
+            fg=self.button_fg,
+            activebackground="#555555" if self.dark_mode else "#45a049"
+        ).pack(pady=5)
         
         # Inventory frame
         right_frame = tk.Frame(main_frame, bd=2, relief="groove", bg=self.frame_color)
@@ -280,7 +298,64 @@ class RNGGame:
                     foreground=data["color"]
                 )
     
+    def show_dex(self):
+        """Show the Dex window with all rarities and their probabilities"""
+        dex_window = tk.Toplevel(self.root)
+        dex_window.title("Rarity Dex")
+        dex_window.geometry("500x600")
+        dex_window.configure(bg=self.bg_color)
+        
+        # Create style for Treeview
+        style = ttk.Style()
+        style.configure("Dex.Treeview",
+                       background=self.tree_bg,
+                       foreground=self.tree_fg,
+                       fieldbackground=self.tree_bg)
+        style.map('Dex.Treeview', 
+                 background=[('selected', '#3D3D3D')],
+                 foreground=[('selected', self.tree_fg)])
+        
+        # Create Treeview
+        dex_tree = ttk.Treeview(
+            dex_window, 
+            columns=("range", "probability"), 
+            height=40,
+            style="Dex.Treeview"
+        )
+        dex_tree.heading("#0", text="Rarity")
+        dex_tree.heading("range", text="Roll Range")
+        dex_tree.heading("probability", text="Probability")
+        dex_tree.column("#0", width=200)
+        dex_tree.column("range", width=100)
+        dex_tree.column("probability", width=150)
+        
+        # Populate Treeview
+        sorted_rarities = sorted(self.rarities.items(), key=lambda x: x[1]["min"])
+        for rarity, data in sorted_rarities:
+            roll_range = f"{data['min']}-{data['max']}"
+            # Calculate approximate probability (1 in X)
+            probability = 1 / (data["weight"] / self.total_weight)
+            prob_text = f"~1 in {int(probability):,}"
+            # Use rarity color if obtained, else grey
+            color = data["color"] if rarity in self.inventory else "#808080"
+            dex_tree.insert(
+                "", "end", 
+                text=rarity, 
+                values=(roll_range, prob_text),
+                tags=(rarity,)
+            )
+            dex_tree.tag_configure(
+                rarity, 
+                foreground=color
+            )
+        
+        dex_tree.pack(pady=5, padx=5, fill="both", expand=True)
+    
     def roll(self):
+        if self.is_flashing:
+            messagebox.showwarning("Animation in Progress", "Please wait until the animation finishes!")
+            return
+        
         current_time = time.time()
         if current_time - self.last_roll_time < self.cooldown:
             remaining = self.cooldown - (current_time - self.last_roll_time)
@@ -341,6 +416,13 @@ class RNGGame:
                 fg=color
             )
         
+        # Check if this is a new rarity before updating inventory
+        is_new_rarity = rarity_name not in self.inventory
+        
+        # Show message for new rarities with rolls < 900
+        if is_new_rarity and roll < 900:
+            messagebox.showinfo("New Rarity!", f"Congrats! You got {rarity_name}!")
+        
         # Update inventory
         if roll > self.inventory.get(rarity_name, 0):
             self.inventory[rarity_name] = roll
@@ -351,11 +433,11 @@ class RNGGame:
         
         # Special effects for high rolls
         if roll >= 900:
-            self.special_effect(roll)
+            self.special_effect(roll, rarity_name, is_new_rarity)
     
     def get_normal_roll(self):
         """Get a roll based on weighted probabilities"""
-        total_weight = sum(rarity["weight"] for rarity in self.rarities.values())
+        total_weight = self.total_weight
         rand = random.uniform(0, total_weight)
         current = 0
         
@@ -395,7 +477,7 @@ class RNGGame:
             current += rarity["weight"]
         
         return random.randint(990, 1001)  # Fallback
-
+    
     def get_rarity(self, roll):
         for name, rarity in self.rarities.items():
             if rarity["min"] <= roll <= rarity["max"]:
@@ -410,54 +492,61 @@ class RNGGame:
         tier = (roll - 1) // 25 + 1
         return f"Tier {tier}"
     
-    def special_effect(self, roll):
-        colors = []
-        if roll >= 900:
-            colors.append(self.rarities["Epic"]["color"])
-        if roll >= 915:
-            colors.append(self.rarities["Runic"]["color"])
-        if roll >= 930:
-            colors.append(self.rarities["Legendary"]["color"])
-        if roll >= 950:
-            colors.append(self.rarities["Angelic"]["color"])
-        if roll >= 975:
-            colors.append(self.rarities["Mythic"]["color"])
-        if roll >= 985:
-            colors.append(self.rarities["Divine"]["color"])
-        if roll >= 995:
-            colors.append(self.rarities["Ethereal"]["color"])
-        if roll >= 1000:
-            colors.append(self.rarities["Celestial"]["color"])
-        if roll == 1001:
-            colors.append(self.rarities["ų̵̧̙̖̠̟͓̼̲̗̖͍̽̏͝n̶̹̯͙̺͍͊́̄̇̎̈́͋̈̈́͛k̴͈̦̽̀̚n̷̨̢͕̱̭̭̼̰̯̬̔̀̈̑͜ô̴͙͍̼̮̗͈͉̥̻̰̳̱̘̳͓w̸̛̠̟͓͙͍͙̤̝̑͌̒̾̇̉̾͐͝͠n̴̠̰͉̳͕̭̖͉̣̥̎̈́͒̅̽̄̿͐̓̐͜͜"]["color"])
+    def special_effect(self, roll, rarity_name, is_new_rarity):
+        # Only flash if the rarity is new
+        if is_new_rarity:
+            self.is_flashing = True
+            colors = []
+            if roll >= 900:
+                colors.append(self.rarities["Epic"]["color"])
+            if roll >= 915:
+                colors.append(self.rarities["Runic"]["color"])
+            if roll >= 930:
+                colors.append(self.rarities["Legendary"]["color"])
+            if roll >= 950:
+                colors.append(self.rarities["Angelic"]["color"])
+            if roll >= 975:
+                colors.append(self.rarities["Mythic"]["color"])
+            if roll >= 985:
+                colors.append(self.rarities["Divine"]["color"])
+            if roll >= 995:
+                colors.append(self.rarities["Ethereal"]["color"])
+            if roll >= 1000:
+                colors.append(self.rarities["Celestial"]["color"])
+            if roll == 1001:
+                colors.append(self.rarities["ų̵̧̙̖̠̟͓̼̲̗̖͍̽̏͝n̶̹̯͙̺͍͊́̄̇̎̈́͋̈̈́͛k̴͈̦̽̀̚n̷̨̢͕̱̭̭̼̰̯̬̔̀̈̑͜ô̴͙͍̼̮̗͈͉̥̻̰̳̱̘̳͓w̸̛̠̟͓͙͍͙̤̝̑͌̒̾̇̉̾͐͝͠n̴̠̰͉̳͕̭̖͉̣̥̎̈́͒̅̽̄̿͐̓̐͜͜"]["color"])
+            
+            original_bg = self.root.cget("bg")
+            
+            for color in colors:
+                self.root.configure(bg=color)
+                self.root.update()
+                time.sleep(0.15)
+            
+            self.root.configure(bg=original_bg)
+            self.is_flashing = False
         
-        original_bg = self.root.cget("bg")
-        
-        for color in colors:
-            self.root.configure(bg=color)
-            self.root.update()
-            time.sleep(0.15)
-        
-        self.root.configure(bg=original_bg)
-        
-        if roll == 1001:
-            messagebox.showinfo("E̶̛͉̘͖͇̰̠̽̓́̿̓̄̀̒̔͋̄̒́͒̃͝R̴̤̱̰̬̖͊̀͐̒̇̄̌͆̓̈́͂͗̕̚Ȓ̷̡͙͓̩̱̻̰̬͚̏̓̏̒̍̈́͋̋̚͘͝͝Ơ̵̩̜̯̻͓͕̭̦̳͎̮̥̥̻̠̐̾̎͑̑͊̆̃̏̈́͝͝R̶̘̰̱̳̩͙͐̉͒͒̆͗͌̉͊̀̉̕̚͜", "Ḭ̵̢̦̣̻̹̠̥̳̼̥̘͂͑̽̾̃́̒̎̅͑̎͜͜ͅͅN̸͔͙̬̺̖̖͈̯̤̜̱̅̇͋̓͐̿͐̄͗̒̄͛̇̈͠ͅÇ̸͇̼̤̲͑̈̈́͂͂̂̄̕͘͠O̷̜͌̄̆̐͌̎̔̇̇͠M̵͉̼̜͉͇̺̟̭̹̙̠͍͚̃͋͊̈́̎̉̍̓̋̃P̴̛̲̯̝̤͔̳̯͍̰͓͖͈͎̥̈́̈́̈́͒̄́̈̆̐̕̚̚͘͜͝͠ͅͅẨ̴̧̛̬͓͔̻̬̻̯͎̳͒̏͛̏̍̒̽͐̀̐̚͠͝T̷̛̟͚͐̈̉̋̉̇̃Ǐ̶̳͈͙͎͇̟͚̮̫́̅̈́̊̊̂̾̀̔́̋B̸͙̤͕̩͒͆̔̀͐͋́͂̀͝L̶̜͓̜̲̺̜̄́͝Ë̴̛͎̘̘̰̗̙̙̼̫͈̱͖̫͔͍́̋̈̊̇̅̍͝͝!̴̭̤̬͓͗̈́̃̌̄̿̐̑͌͛͑̚̚̕͘͝    ̴̢̭̤̘̰̮̣̲͍̟͈̜͎͔̀̀͊̍̕͘͠͝W̵̯̼̪̤͚̣̦̖͖̪͍̫̫̭̿̍͋͛͂̕ͅḨ̸̡̜̥̺̠̝̰̱̘̘̜̠̲̆́̊̾̑͘̚͝A̴̻̝̯̫͚̬̱̔͐̉̑̐ͅT̵̢͍͍̟͍̯̖͈̻̯͑͊͛̀̽̌̽̈́̅͘ ̵̱͍̓̽̓̃̑̏̋̉͊̏̄̑͒̈́̚A̷̧̻̖̳̱̺͕̪̪̱͋̀̀͒̓͛͊͌̄̃̅ͅR̴̡̨̛̛͔͉̹̤͎̠͖̪̅̀͗̋͒͒͗͌͘͘̕Ę̶̧͍̻͓̳̻̺̜͓̣̇̾̐́̈̅͂̄̂̀̑̐ͅ ̶̢̨͎̺͉̼͉͓͇̻͖͎͕̠̯̿͂̎͗̃̆̈̉̑̃͠ͅT̸̢͕͇̠̺̻̀͛͊̍̿͘H̵̢̼̣̲̹͓̟̹̖̘͉̲̠͈͈̙̏Ę̵̘̳͕̱̱̥̰͔͇̳͎̬̇́́̆͑̓͝ ̴̡̛̓̄̑͑́̿̏̓̑̑̽̐̀͝C̶̡̨̯̲͖͔̰͇͉̠̤̟͇͚̘͚̏͋̽͒̈́͋̌͆͊͛̔̾͆̚̕͠H̵̲̏̾̊̄̈́̏́̃͗̽̽̋̚̕͘͠͠A̷̢̨̭͚̼̣͇̭̦̟͈̦̓ͅṆ̴̡̡̗̙̟̳̪͚͛͛̈́́̑͐̎̓͗̀̇Ç̸͇̠̝̩̯̫͙̆̓̑È̴̛̟̣̱͖̩̝͍̹̂͌̋̕͝S̵̨͉̘̖̹̜̆́̐͛̈́͂͋͛̏̓̇...")
-        elif roll >= 1000:
-            messagebox.showinfo("CELESTIAL!", "UNBELIEVABLE! YOU ROLLED THE CELESTIAL 1000!")
-        elif roll >= 995:
-            messagebox.showinfo("ETHEREAL!", f"STUPENDOUS! You rolled an ETHEREAL {roll}!")
-        elif roll >= 985:
-            messagebox.showinfo("DIVINE!", f"INCREDIBLE! You rolled a DIVINE {roll}!")
-        elif roll >= 975:
-            messagebox.showinfo("MYTHIC!", f"AMAZING! You rolled a MYTHIC {roll}!")
-        elif roll >= 950:
-            messagebox.showinfo("ANGELIC!", f"TRANSCENDANT! You rolled an ANGELIC {roll}!")
-        elif roll >= 930:
-            messagebox.showinfo("LEGENDARY!", f"SUPER! You rolled a LEGENDARY {roll}!")
-        elif roll >= 915:
-            messagebox.showinfo("RUNIC!", f"GREAT! You rolled a RUNIC {roll}!")
-        elif roll >= 900:
-            messagebox.showinfo("EPIC!", f"NICE! You rolled an EPIC {roll}!")
+        # Show notification only if not previously shown for this rarity
+        if roll >= 900 and rarity_name not in self.shown_notifications:
+            self.shown_notifications.add(rarity_name)
+            if roll == 1001:
+                messagebox.showinfo("E̶̛͉̘͖͇̰̠̽̓́̿̓̄̀̒̔͋̄̒́͒̃͝R̴̤̱̰̬̖͊̀͐̒̇̄̌͆̓̈́͂͗̕̚Ȓ̷̡͙͓̩̱̻̰̬͚̏̓̏̒̍̈́͋̋̚͘͝͝Ơ̵̩̜̯̻͓͕̭̦̳͎̮̥̥̻̠̐̾̎͑̑͊̆̃̏̈́͝͝R̶̘̰̱̳̩͙͐̉͒͒̆͗͌̉͊̀̉̕̚͜", "Ḭ̵̢̦̣̻̹̠̥̳̼̥̘͂͑̽̾̃́̒̎̅͑̎͜͜ͅͅN̸͔͙̬̺̖̖͈̯̤̜̱̅̇͋̓͐̿͐̄͗̒̄͛̇̈͠ͅÇ̸͇̼̤̲͑̈̈́͂͂̂̄̕͘͠O̷̜͌̄̆̐͌̎̔̇̇͠M̵͉̼̜͉͇̺̟̭̹̙̠͍͚̃͋͊̈́̎̉̍̓̋̃P̴̛̲̯̝̤͔̳̯͍̰͓͖͈͎̥̈́̈́̈́͒̄́̈̆̐̕̚̚͘͜͝͠ͅͅẨ̴̧̛̬͓͔̻̬̻̯͎̳͒̏͛̏̍̒̽͐̀̐̚͠͝T̷̛̟͚͐̈̉̋̉̇̃Ǐ̶̳͈͙͎͇̟͚̮̫́̅̈́̊̊̂̾̀̔́̋B̸͙̤͕̩͒͆̔̀͐͋́͂̀͝L̶̜͓̜̲̺̜̄́͝Ë̴̛͎̘̘̰̗̙̙̼̫͈̱͖̫͔͍́̋̈̊̇̅̍͝͝!̴̭̤̬͓͗̈́̃̌̄̿̐̑͌͛͑̚̚̕͘͝    ̴͖͗͟W̩̥͖ͩͩͩ͡ͅH̛͇͇͗͗ͮ͡A̴͍͍͖̖ͮͩͮͩT̴̴͍̩͍ͮ ̴͍̍ͮ̍A͍͍ͮͮR̛̛ͮͮͮE̶̴̛͍͛͛ ̶̛̛͍ͮT̛ͮ͗ͮH̩̩ͮͮͩE̴̛ͮͮ ̛͍ͮC̩ͮͩͩH͖ͮ͡A͖ͮͮN͖ͮͮͩCͮ͗E͖ͮ͡S̩ͮ...")
+            elif roll >= 1000:
+                messagebox.showinfo("CELESTIAL!", "UNBELIEVABLE! You rolled THE CELESTIAL 1000!")
+            elif roll >= 996:
+                messagebox.showinfo("ETHEREAL!", f"STUPENDOUS! You rolled an ETHEREAL {roll}!")
+            elif roll >= 985:
+                messagebox.showinfo("DIVINE!", f"INCREDIBLE! You rolled a DIVINE {roll}!")
+            elif roll >= 975:
+                messagebox.showinfo("MYTHIC!", f"AMAZING! You rolled a MYTHIC {roll}!")
+            elif roll >= 950:
+                messagebox.showinfo("ANGELIC!", f"TRANSCENDANT! You rolled an ANGELIC {roll}!")
+            elif roll >= 930:
+                messagebox.showinfo("LEGENDARY!", f"SUPER! You rolled a LEGENDARY! {roll}!")
+            elif roll >= 915:
+                messagebox.showinfo("RUNIC!", f"GREAT! You rolled a RUNIC {roll}!")
+            elif roll >= 900:
+                messagebox.showinfo("EPIC!", f"NICE! You rolled an EPIC {roll}!")
     
     def show_history(self):
         history_window = tk.Toplevel(self.root)
@@ -480,7 +569,7 @@ class RNGGame:
                 scrollregion=canvas.bbox("all")
             )
         )
-        
+
         canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
         canvas.configure(yscrollcommand=scrollbar.set)
         
@@ -489,13 +578,17 @@ class RNGGame:
         
         # Header
         header = tk.Frame(scrollable_frame, bg=self.bg_color)
-        header.pack(fill="x", pady=(0, 5))
+        header.pack(fill="x", pady=(0,5))
+        
         tk.Label(header, text="Roll", width=6, font=("Arial", 10, "bold"), 
-               bg=self.bg_color, fg=self.text_color).pack(side="left")
+                 bg=self.bg_color, 
+                 fg=self.text_color).pack(side="left")
         tk.Label(header, text="Rarity", width=25, font=("Arial", 10, "bold"),
-               bg=self.bg_color, fg=self.text_color).pack(side="left")
+                 bg=self.bg_color, 
+                 fg=self.text_color).pack(side="left")
         tk.Label(header, text="Tier", width=10, font=("Arial", 10, "bold"),
-               bg=self.bg_color, fg=self.text_color).pack(side="right")
+                 bg=self.bg_color, 
+                 fg=self.text_color).pack(side="right")
         
         # Show history in reverse order (newest first)
         for roll, rarity, color, exact_tier in reversed(self.history):
