@@ -526,7 +526,7 @@ class RNGGame:
             self.is_flashing = False
         
         # Show notification only if not previously shown for this rarity
-        if roll >= 900 and rarity_name not in self.shown_notifications:
+        if roll >= 901 and rarity_name not in self.shown_notifications:
             self.shown_notifications.add(rarity_name)
             if roll == 1001:
                 messagebox.showinfo("E̶̛͉̘͖͇̰̠̽̓́̿̓̄̀̒̔͋̄̒́͒̃͝R̴̤̱̰̬̖͊̀͐̒̇̄̌͆̓̈́͂͗̕̚Ȓ̷̡͙͓̩̱̻̰̬͚̏̓̏̒̍̈́͋̋̚͘͝͝Ơ̵̩̜̯̻͓͕̭̦̳͎̮̥̥̻̠̐̾̎͑̑͊̆̃̏̈́͝͝R̶̘̰̱̳̩͙͐̉͒͒̆͗͌̉͊̀̉̕̚͜", "Ḭ̵̢̦̣̻̹̠̥̳̼̥̘͂͑̽̾̃́̒̎̅͑̎͜͜ͅͅN̸͔͙̬̺̖̖͈̯̤̜̱̅̇͋̓͐̿͐̄͗̒̄͛̇̈͠ͅÇ̸͇̼̤̲͑̈̈́͂͂̂̄̕͘͠O̷̜͌̄̆̐͌̎̔̇̇͠M̵͉̼̜͉͇̺̟̭̹̙̠͍͚̃͋͊̈́̎̉̍̓̋̃P̴̛̲̯̝̤͔̳̯͍̰͓͖͈͎̥̈́̈́̈́͒̄́̈̆̐̕̚̚͘͜͝͠ͅͅẨ̴̧̛̬͓͔̻̬̻̯͎̳͒̏͛̏̍̒̽͐̀̐̚͠͝T̷̛̟͚͐̈̉̋̉̇̃Ǐ̶̳͈͙͎͇̟͚̮̫́̅̈́̊̊̂̾̀̔́̋B̸͙̤͕̩͒͆̔̀͐͋́͂̀͝L̶̜͓̜̲̺̜̄́͝Ë̴̛͎̘̘̰̗̙̙̼̫͈̱͖̫͔͍́̋̈̊̇̅̍͝͝!̴̭̤̬͓͗̈́̃̌̄̿̐̑͌͛͑̚̚̕͘͝    ̴͖͗͟W̩̥͖ͩͩͩ͡ͅH̛͇͇͗͗ͮ͡A̴͍͍͖̖ͮͩͮͩT̴̴͍̩͍ͮ ̴͍̍ͮ̍A͍͍ͮͮR̛̛ͮͮͮE̶̴̛͍͛͛ ̶̛̛͍ͮT̛ͮ͗ͮH̩̩ͮͮͩE̴̛ͮͮ ̛͍ͮC̩ͮͩͩH͖ͮ͡A͖ͮͮN͖ͮͮͩCͮ͗E͖ͮ͡S̩ͮ...")
@@ -544,7 +544,7 @@ class RNGGame:
                 messagebox.showinfo("LEGENDARY!", f"SUPER! You rolled a LEGENDARY! {roll}!")
             elif roll >= 915:
                 messagebox.showinfo("RUNIC!", f"GREAT! You rolled a RUNIC {roll}!")
-            elif roll >= 900:
+            elif roll >= 901:
                 messagebox.showinfo("EPIC!", f"NICE! You rolled an EPIC {roll}!")
     
     def show_history(self):
