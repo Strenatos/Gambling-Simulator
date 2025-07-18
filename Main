@@ -419,7 +419,7 @@ class RNGGame:
         is_new_rarity = rarity_name not in self.inventory
         
         # Show message for new rarities with rolls < 900
-        if is_new_rarity and roll < 900:
+        if is_new_rarity and roll < 901:
             messagebox.showinfo("New Rarity!", f"Congrats! You got {rarity_name}!")
         
         # Update inventory
@@ -431,7 +431,7 @@ class RNGGame:
         self.history.append((roll, rarity_name, color, exact_tier))
         
         # Special effects for high rolls
-        if roll >= 900:
+        if roll >= 901:
             self.special_effect(roll, rarity_name, is_new_rarity)
     
     def get_normal_roll(self):
@@ -449,7 +449,7 @@ class RNGGame:
     
     def get_high_roll(self):
         """Get a roll from 900+ tiers"""
-        high_rarities = {k:v for k,v in self.rarities.items() if v["min"] >= 900}
+        high_rarities = {k:v for k,v in self.rarities.items() if v["min"] >= 901}
         
         total_weight = sum(rarity["weight"] for rarity in high_rarities.values())
         rand = random.uniform(0, total_weight)
@@ -460,11 +460,11 @@ class RNGGame:
                 return random.randint(rarity["min"], rarity["max"])
             current += rarity["weight"]
         
-        return random.randint(900, 1001)  # Fallback
+        return random.randint(901, 1001)  # Fallback
     
     def get_highest_roll(self):
-        """Get a roll from 990+ tiers"""
-        high_rarities = {k:v for k,v in self.rarities.items() if v["min"] >= 990}
+        """Get a roll from 1K+ tiers"""
+        high_rarities = {k:v for k,v in self.rarities.items() if v["min"] >= 1000}
         
         total_weight = sum(rarity["weight"] for rarity in high_rarities.values())
         rand = random.uniform(0, total_weight)
