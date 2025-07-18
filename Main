@@ -496,7 +496,7 @@ class RNGGame:
         if is_new_rarity:
             self.is_flashing = True
             colors = []
-            if roll >= 900:
+            if roll >= 901:
                 colors.append(self.rarities["Epic"]["color"])
             if roll >= 915:
                 colors.append(self.rarities["Runic"]["color"])
