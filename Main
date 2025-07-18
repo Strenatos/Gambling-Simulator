@@ -464,7 +464,7 @@ class RNGGame:
     
     def get_highest_roll(self):
         """Get a roll from 1K+ tiers"""
-        high_rarities = {k:v for k,v in self.rarities.items() if v["min"] >= 1000}
+        high_rarities = {k:v for k,v in self.rarities.items() if v["min"] >= 1001}
         
         total_weight = sum(rarity["weight"] for rarity in high_rarities.values())
         rand = random.uniform(0, total_weight)
